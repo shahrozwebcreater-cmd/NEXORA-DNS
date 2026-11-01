@@ -1,0 +1,174 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXORA DNS</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080d19;color:#eaf0ff;font-family:Arial,sans-serif}
+header{padding:22px 6%;border-bottom:1px solid #202b40;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:24px;font-weight:800;color:#75a7ff}
+.logo span{color:#a78bfa}
+main{max-width:1100px;margin:35px auto;padding:0 18px}
+h1{font-size:30px;margin-bottom:8px}
+.muted{color:#8c9bb5}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:25px 0}
+.card,.panel{background:#111a2b;border:1px solid #26344d;border-radius:13px;padding:20px}
+.card strong{font-size:27px;display:block;margin-top:12px}
+.panel{margin-top:20px}
+input,select{background:#0a1222;color:white;border:1px solid #34435e;padding:12px;border-radius:7px;width:100%;min-width:0}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+button{background:#557ff5;color:white;border:0;padding:12px 18px;border-radius:7px;font-weight:bold;cursor:pointer}
+button:hover{opacity:.85}
+.delete{background:#a83e55;padding:8px 12px}
+table{width:100%;border-collapse:collapse;margin-top:18px;text-align:left}
+th,td{padding:13px 9px;border-bottom:1px solid #29364b;font-size:13px}
+th{color:#8fa7ce}
+.tag{color:#7eb6ff;background:#192d4c;padding:5px 9px;border-radius:5px}
+.footer{text-align:center;color:#64748b;padding:35px}
+@media(max-width:650px){
+ .cards{grid-template-columns:1fr}
+ .form{grid-template-columns:1fr}
+ table{display:block;overflow-x:auto}
+ header{padding:18px}
+}
+</style>
+</head>
+<body>
+<header>
+ <div class="logo">NEXORA <span>DNS</span></div>
+ <span class="muted">DNS MANAGEMENT</span>
+</header>
+
+<main>
+ <h1>DNS Dashboard</h1>
+ <p class="muted">Manage your domains and DNS records.</p>
+
+ <div class="cards">
+  <div class="card">Total Domains<strong id="domains">0</strong></div>
+  <div class="card">DNS Records<strong id="total">0</strong></div>
+  <div class="card">Provider Status<strong style="color:#fbbf24">DEMO</strong></div>
+ </div>
+
+ <section class="panel">
+  <h2>Add DNS Record</h2>
+  <div class="form">
+   <input id="host" placeholder="Hostname (e.g. play.example.com)">
+   <select id="type">
+    <option>A</option>
+    <option>AAAA</option>
+    <option>CNAME</option>
+    <option>TXT</option>
+    <option>MX</option>
+    <option>SRV</option>
+   </select>
+   <input id="value" placeholder="Record value / IP">
+   <input id="ttl" type="number" value="3600" placeholder="TTL">
+   <button onclick="addRecord()">+ Add Record</button>
+  </div>
+  <p class="muted">Records are currently saved in this browser only.</p>
+ </section>
+
+ <section class="panel">
+  <h2>Minecraft SRV Helper</h2>
+  <div class="form">
+   <input id="mcHost" value="play.nexoramc.fun">
+   <input id="mcPort" type="number" value="26517">
+   <button onclick="makeSRV()">Generate SRV</button>
+  </div>
+  <p id="srvResult" class="muted"></p>
+ </section>
+
+ <section class="panel">
+  <h2>DNS Records</h2>
+  <div style="overflow-x:auto">
+   <table>
+    <thead>
+     <tr>
+      <th>HOST</th><th>TYPE</th><th>VALUE</th><th>TTL</th><th>ACTION</th>
+     </tr>
+    </thead>
+    <tbody id="records"></tbody>
+   </table>
+  </div>
+ </section>
+</main>
+
+<div class="footer">© 2026 NEXORA DNS · Built for the future</div>
+
+<script>
+let data=JSON.parse(localStorage.getItem("nexora_records")||"[]");
+
+function save(){
+ localStorage.setItem("nexora_records",JSON.stringify(data));
+ render();
+}
+
+function addRecord(){
+ const host=document.getElementById("host").value.trim();
+ const type=document.getElementById("type").value;
+ const value=document.getElementById("value").value.trim();
+ const ttl=Number(document.getElementById("ttl").value);
+
+ if(!host||!value||!Number.isInteger(ttl)||ttl<60){
+  alert("Enter valid record details. Minimum TTL is 60.");
+  return;
+ }
+
+ data.push({host,type,value,ttl});
+ save();
+ document.getElementById("host").value="";
+ document.getElementById("value").value="";
+}
+
+function removeRecord(i){
+ if(confirm("Delete this demo record?")){
+  data.splice(i,1);
+  save();
+ }
+}
+
+function render(){
+ document.getElementById("records").innerHTML=
+ data.map((r,i)=>`
+ <tr>
+ <td>${escapeHTML(r.host)}</td>
+ <td><span class="tag">${escapeHTML(r.type)}</span></td>
+ <td>${escapeHTML(r.value)}</td>
+ <td>${r.ttl}</td>
+ <td><button class="delete" onclick="removeRecord(${i})">Delete</button></td>
+ </tr>`).join("");
+
+ document.getElementById("total").textContent=data.length;
+ document.getElementById("domains").textContent=
+ new Set(data.map(r=>r.host.split(".").slice(-2).join("."))).size;
+}
+
+function escapeHTML(s){
+ return String(s).replace(/[&<>"']/g,c=>({
+ '&':'&amp;','<':'&lt;','>':'&gt;',
+ '"':'&quot;',"'":'&#39;'
+ })[c]);
+}
+
+function makeSRV(){
+ const host=document.getElementById("mcHost").value.trim();
+ const port=Number(document.getElementById("mcPort").value);
+
+ if(!host||!Number.isInteger(port)||port<1||port>65535){
+  alert("Enter a valid hostname and port.");
+  return;
+ }
+
+ document.getElementById("srvResult").textContent=
+ "Service: _minecraft | Protocol: _tcp | Port: "+port+
+ " | Target: "+host+".";
+}
+
+render();
+</script>
+</body>
+  </html>
+  
